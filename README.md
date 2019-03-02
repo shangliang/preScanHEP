@@ -1,6 +1,2 @@
-# EasyScan_HEP
-A collection of tools to scan the parameter space of high energy phyics model that are in best agreement with experimental data.
-<<<<<<< HEAD
-new!  
-=======
->>>>>>> origin/gh-pages
+# PreScanHEP
+PreScanHEP is only used for testing Easyscan_HEP at the web site https://github.com/phyzhangyang/EasyScan_HEP
