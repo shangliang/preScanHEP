@@ -223,6 +223,8 @@ def mcmcrun(LogLikelihood,Prior,n_dims,n_params,n_live_points,inpar,outpar,StepS
     while True:
         Prior(cube, n_dims, n_params) # normalized to cube to real value
         loglike = LogLikelihood(cube, n_dims, n_params)
+        f_out2.write('\t'.join([str(x) for x in cube])+'\t'+str(1)+'\n')
+        f_out2.flush()
         if loglike > sf.log_zero / 2.0 : break
         if n_init == 0 : 
             sf.WarningNoWait('The initial point is unphysical, it will find the physical initial points randmly.')
@@ -254,11 +256,10 @@ def mcmcrun(LogLikelihood,Prior,n_dims,n_params,n_live_points,inpar,outpar,StepS
     kcovar = 0 
     while Naccept < n_live_points:
 
-        Nrun += 1
         RangeFlag = True
         for j in range(n_dims):
-            rd = random()
             par[j] = gauss(CurPar[j],exp(kcovar)*covar[j]) # normalized to 1 
+            #rd = random()
             #par[j] = CurPar[j] + covar[j] * (0.5-rd)*2
         if max(par)>1 or min(par)<0 :
             RangeFlag = False
@@ -266,13 +267,17 @@ def mcmcrun(LogLikelihood,Prior,n_dims,n_params,n_live_points,inpar,outpar,StepS
             if Nout%100 == 0: 
                 sf.WarningNoWait("Too many points out of range!")
         else:
+            Nrun += 1
             Nout=0
             for i in range(n_dims): cube[i] = par[i]
             Prior(cube, n_dims, n_params)
             loglike = LogLikelihood(cube, n_dims, n_params)
+            #if RangeFlag and (Chisq < - 2.0 * sf.log_zero) :
+            f_out2.write('\t'.join([str(x) for x in cube])+'\t'+str(1)+'\n')
+            f_out2.flush()
+
             Chisq = - 2.0 * loglike
 
-        print("Chisq", Chisq);raw_input()
         Flag_accept = RangeFlag and (Chisq < CurChisq + 20) 
         if Flag_accept: 
             if CurChisq > Chisq: 
@@ -301,7 +306,8 @@ def mcmcrun(LogLikelihood,Prior,n_dims,n_params,n_live_points,inpar,outpar,StepS
                 shutil.copy(File, SavePath)
 
         else:
-            mult +=1
+            if RangeFlag:
+                mult +=1
 
         AccRat = float(Naccept)/float(Nrun)
 
@@ -309,26 +315,28 @@ def mcmcrun(LogLikelihood,Prior,n_dims,n_params,n_live_points,inpar,outpar,StepS
         else: kcovar =1
 
         if Nrun%n_print == 0:
-            print '------------ Num: %i ------------'%Nrun
-            for i,name in enumerate(inpar):
-                print 'Input  - %s = %s '%(name,cube[i])
-            if (Chisq < - 2.0 * sf.log_zero) and RangeFlag:
-                print '.................................'
-                for i,name in enumerate(outpar):
-                    print 'Output - %s = %s '%(name,cube[i+n_dims])
-                print '.................................'
-                print 'Test     Chi^2 = '+str(Chisq)
-            print 'Current  Chi^2 = '+str(CurChisq)
-            print 'Mimimum  Chi^2 = '+str(MinChisq)
-            print 'Accepted Num  = '+str(Naccept)
-            print 'Total    Num   = '+str(Nrun)
-            print 'Accepted Ratio = '+str(AccRat)
-            if FlagTuneR :
-                print 'StepZize factor= '+str(exp(kcovar))
+            if RangeFlag:
+                print '------------ Num: %i ------------'%Nrun
+                for i,name in enumerate(inpar):
+                    print 'Input  - %s = %s '%(name,cube[i])
+                if (Chisq < - 2.0 * sf.log_zero) and RangeFlag:
+                    print '.................................'
+                    for i,name in enumerate(outpar):
+                        print 'Output - %s = %s '%(name,cube[i+n_dims])
+                    print '.................................'
+                    print 'Test     Chi^2 = '+str(Chisq)
+                print 'Current  Chi^2 = '+str(CurChisq)
+                print 'Mimimum  Chi^2 = '+str(MinChisq)
+                print 'Accepted Num  = '+str(Naccept)
+                print 'Total    Num   = '+str(Nrun)
+                print 'Accepted Ratio = '+str(AccRat)
+                if FlagTuneR :
+                    print 'StepSize factor= '+str(exp(kcovar))
 
-        if RangeFlag and (Chisq < - 2.0 * sf.log_zero) :
-            f_out2.write('\t'.join([str(x) for x in CurObs])+'\t'+str(mult)+'\n')
-            f_out2.flush()
-
-
-
+    # save the last point
+    f_out.write('\t'.join([str(x) for x in CurObs])+'\t'+str(mult)+'\n')
+    f_out.flush()
+    for File in acceptFiles:
+        path = os.path.join(outputfiles_basename,"SavedFile")
+        SavePath = os.path.join(path, os.path.basename(File)+"."+str(Naccept))
+        shutil.copy(File, SavePath)
